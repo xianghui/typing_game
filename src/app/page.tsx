@@ -1,103 +1,137 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+const texts = [
+  "The quick brown fox jumps over the lazy dog.",
+  "Never underestimate the power of a good book.",
+  "The early bird catches the worm.",
+  "Practice makes perfect.",
+  "The only way to do great work is to love what you do.",
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [currentText, setCurrentText] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [endTime, setEndTime] = useState<number | null>(null);
+  const [wpm, setWpm] = useState(0);
+  const [accuracy, setAccuracy] = useState(0);
+  const [errors, setErrors] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+  useEffect(() => {
+    resetGame();
+  }, []);
+
+  const resetGame = () => {
+    const randomIndex = Math.floor(Math.random() * texts.length);
+    setCurrentText(texts[randomIndex]);
+    setInputValue("");
+    setStartTime(null);
+    setEndTime(null);
+    setWpm(0);
+    setAccuracy(0);
+    setErrors(0);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    if (!startTime) {
+      setStartTime(Date.now());
+    }
+
+    let currentErrors = 0;
+    for (let i = 0; i < value.length; i++) {
+      if (value[i] !== currentText[i]) {
+        currentErrors++;
+      }
+    }
+    setErrors(currentErrors);
+
+    const now = Date.now();
+    const timeTakenInSeconds = (now - (startTime || now)) / 1000;
+
+    // Calculate WPM
+    if (timeTakenInSeconds > 0) {
+      const wordsTyped = value.length / 5; // Standard WPM calculation (characters / 5)
+      const calculatedWpm = Math.round((wordsTyped / timeTakenInSeconds) * 60);
+      setWpm(calculatedWpm);
+    } else {
+      setWpm(0);
+    }
+
+    // Calculate Accuracy
+    if (value.length > 0) {
+      const calculatedAccuracy =
+        ((value.length - currentErrors) / value.length) * 100;
+      setAccuracy(Math.round(calculatedAccuracy));
+    } else {
+      setAccuracy(0);
+    }
+
+    if (value.length === currentText.length) {
+      setEndTime(now);
+    }
+  };
+
+  // No longer needed as calculations are done in handleInputChange
+  const calculateResults = (correctChars: number, currentErrors: number) => {
+    // This function can be removed or left empty if not used elsewhere
+  };
+
+  const getCharClass = (char: string, index: number) => {
+    if (index < inputValue.length) {
+      return char === inputValue[index] ? "text-green-500" : "text-red-500";
+    }
+    return "";
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-center text-3xl font-bold">
+            Typing Game
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-2xl p-4 border rounded-md bg-gray-50 dark:bg-gray-800 tracking-wide leading-relaxed">
+            {currentText.split("").map((char, index) => (
+              <span key={index} className={getCharClass(char, index)}>
+                {char}
+              </span>
+            ))}
+          </div>
+          <Input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder="Start typing here..."
+            className="text-lg p-3"
+            disabled={endTime !== null}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <div className="flex justify-around text-xl font-semibold">
+            <span>WPM: {wpm}</span>
+            <span>Accuracy: {accuracy}%</span>
+            <span>Errors: {errors}</span>
+          </div>
+          <div className="flex justify-center">
+            <Button onClick={resetGame} className="text-lg px-6 py-3">
+              Reset Game
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
